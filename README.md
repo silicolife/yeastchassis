@@ -88,11 +88,11 @@ The first time that users are importing the optimization results, it is required
 
 ```java
 //@Test
-	public void importAndSaveEnv() throws Exception {		
-		AnalysisEnv env = new AnalysisEnv();
-		env.createFromConfigurationAndLoadResults(baseDir+"/configuration/20170313_iMM904_aerobic_IMPORT_current.conf", baseDirTargets, baseDir);
-		env.saveSerializedObject(envSerialized);
-	}
+public void importAndSaveEnv() throws Exception {		
+	AnalysisEnv env = new AnalysisEnv();
+	env.createFromConfigurationAndLoadResults(baseDir+"/configuration/20170313_iMM904_aerobic_IMPORT_current.conf", baseDirTargets, baseDir);
+	env.saveSerializedObject(envSerialized);
+}
 ```
 * This will generate the new directory structure inside the root (in this case, it is already created in `/yeastchassis/data/20170313_acids_GK_IMPORT/20170313_1609#[EXT_IMPORT]`).
 * In the last line, we are serializing the environment for further use.
@@ -106,8 +106,8 @@ The typical analysis process begins with aggregating and simplifying the results
 First, users are required to load the environment that was previous serialized.
 
 ```java
-	AnalysisEnv env = AnalysisEnv.loadSerializedObject(envSerialized);
-	env.printTree();
+AnalysisEnv env = AnalysisEnv.loadSerializedObject(envSerialized);
+env.printTree();
 ```
 
 Afterwards, users can specify one or more objective functions that will be used to
@@ -116,23 +116,23 @@ is also possible to specify the percentage of "fitness" that can be lost in that
 when simplifying the solution
 		
 ```java
-		Map<Map<String,Object>,String> overrideObjectiveFunctions = new HashMap<>();
-		Map<String,Object> cyield_configuration = new HashMap<>();
-		cyield_configuration.put(CYIELDObjectiveFunction.OBJECTIVE_FUNCTION_ID, CYIELDObjectiveFunction.ID);		
-		overrideObjectiveFunctionConfiguration.put(cyield_configuration,"FBA"); //carbon yield will be calculated based on the results of the FBA simulation
+Map<Map<String,Object>,String> overrideObjectiveFunctions = new HashMap<>();
+Map<String,Object> cyield_configuration = new HashMap<>();
+cyield_configuration.put(CYIELDObjectiveFunction.OBJECTIVE_FUNCTION_ID, CYIELDObjectiveFunction.ID);		
+overrideObjectiveFunctionConfiguration.put(cyield_configuration,"FBA"); //carbon yield will be calculated based on the results of the FBA simulation
 
-		Map<String,Object> simplifierOptions = new HashMap<>();
-		simplifierOptions.put(SimplifierOptions.MIN_PERCENT_PER_OBJFUNC, new Double[]{0.9});
+Map<String,Object> simplifierOptions = new HashMap<>();
+simplifierOptions.put(SimplifierOptions.MIN_PERCENT_PER_OBJFUNC, new Double[]{0.9});
 ```
 
 Finally, the `AggregateSimplifyTask` is created, specifying the root directory of the results (the directory generated in the first analysis step - `createFromConfigurationAndLoadResults()`.
 The simplification process can take a long time
 
 ```java
-		AggregateSimplifyTask aggregateSimplify = new AggregateSimplifyTask(baseDir+"/20170313_1609#[EXT_IMPORT]", env, false);
-		aggregateSimplify.setOverrideObjectiveFunctionsConfiguration(overrideObjectiveFunctionConfiguration);
-//		aggregateSimplify.setSimplifierOptions(simplifierOptions);
-		aggregateSimplify.run();
+AggregateSimplifyTask aggregateSimplify = new AggregateSimplifyTask(baseDir+"/20170313_1609#[EXT_IMPORT]", env, false);
+aggregateSimplify.setOverrideObjectiveFunctionsConfiguration(overrideObjectiveFunctionConfiguration);
+aggregateSimplify.setSimplifierOptions(simplifierOptions);
+aggregateSimplify.run();
 ```
 
 ### 5.3 - Compile results
@@ -142,75 +142,71 @@ When the results have been aggregated and simplified, it is now possible to gene
 The first step is, as before, loading the analysis environment:
 
 ```java
-	AnalysisEnv env = AnalysisEnv.loadSerializedObject(envSerialized);
-	env.printTree();
+AnalysisEnv env = AnalysisEnv.loadSerializedObject(envSerialized);
+env.printTree();
 ```
 
 Afterwards, it is possible to specify multiple simulation methods (FBA, pFBA, MOMA, lMOMA, etc.)...
 
 ```java
-		Map<String,Map<String,Object>> overrideSimulationConfiguration = new HashMap<String,Map<String,Object>>();
-		
-		Map<String,Object> fbaConf = new HashMap<>();
-		fbaConf.put(SimulationProperties.METHOD_ID, SimulationProperties.PFBA);
-		fbaConf.put(SimulationProperties.IS_MAXIMIZATION, true);
-		fbaConf.put(SimulationProperties.SOLVER, CPLEX3SolverBuilder.ID);
-		fbaConf.put(SimulationProperties.OBJECTIVE_FUNCTION, null);
-		fbaConf.put(SimulationProperties.MODEL, null);
-		fbaConf.put(SimulationProperties.ENVIRONMENTAL_CONDITIONS, null);
-		overrideSimulationConfiguration.put(SimulationProperties.PFBA, fbaConf);
-		
-		return overrideSimulationConfiguration;
-	};
+Map<String,Map<String,Object>> overrideSimulationConfiguration = new HashMap<String,Map<String,Object>>();
 
+Map<String,Object> fbaConf = new HashMap<>();
+fbaConf.put(SimulationProperties.METHOD_ID, SimulationProperties.PFBA);
+fbaConf.put(SimulationProperties.IS_MAXIMIZATION, true);
+fbaConf.put(SimulationProperties.SOLVER, CPLEX3SolverBuilder.ID);
+fbaConf.put(SimulationProperties.OBJECTIVE_FUNCTION, null);
+fbaConf.put(SimulationProperties.MODEL, null);
+fbaConf.put(SimulationProperties.ENVIRONMENTAL_CONDITIONS, null);
+overrideSimulationConfiguration.put(SimulationProperties.PFBA, fbaConf);
 ```
 
 as well as multiple objective functions to be calculated for each solution.
 For each objective function, the user must specify which simulation method should be user to calculate it.
 
 ```java
-		Map<Map<String, Object>, String> overrideObjectiveFunctions = new LinkedHashMap<>();
+Map<Map<String, Object>, String> overrideObjectiveFunctions = new LinkedHashMap<>();
+
+/**
+ * 0 - number of knockouts
+ */
+Map<String, Object> nkConf = new HashMap<>();
+nkConf.put(NumKnockoutsObjectiveFunction.OBJECTIVE_FUNCTION_ID, NumKnockoutsObjectiveFunction.ID);
+nkConf.put(NumKnockoutsObjectiveFunction.NK_PARAM_MAXIMIZATION, false);
+ofMapExtra.put(nkConf, SimulationProperties.PFBA);
+
+/**
+ * 1 - biomass flux value
+ */
+Map<String, Object> fvBioConf = new HashMap<>();
+fvBioConf.put(FluxValueObjectiveFunction.OBJECTIVE_FUNCTION_ID, FluxValueObjectiveFunction.ID);
+fvBioConf.put(FluxValueObjectiveFunction.FV_PARAM_MAXIMIZATION, true);
+fvBioConf.put(FluxValueObjectiveFunction.FV_PARAM_REACTION, ObjectiveFunctionParameterType.REACTION_BIOMASS);
+ofMapExtra.put(fvBioConf, SimulationProperties.PFBA);
 		
-		/**
-		 * 0 - number of knockouts
-		 */
-		Map<String, Object> nkConf = new HashMap<>();
-		nkConf.put(NumKnockoutsObjectiveFunction.OBJECTIVE_FUNCTION_ID, NumKnockoutsObjectiveFunction.ID);
-		nkConf.put(NumKnockoutsObjectiveFunction.NK_PARAM_MAXIMIZATION, false);
-		ofMapExtra.put(nkConf, SimulationProperties.PFBA);
-		
-		/**
-		 * 1 - biomass flux value
-		 */
-		Map<String, Object> fvBioConf = new HashMap<>();
-		fvBioConf.put(FluxValueObjectiveFunction.OBJECTIVE_FUNCTION_ID, FluxValueObjectiveFunction.ID);
-		fvBioConf.put(FluxValueObjectiveFunction.FV_PARAM_MAXIMIZATION, true);
-		fvBioConf.put(FluxValueObjectiveFunction.FV_PARAM_REACTION, ObjectiveFunctionParameterType.REACTION_BIOMASS);
-		ofMapExtra.put(fvBioConf, SimulationProperties.PFBA);
-				
-		/**
-		 * 2 - target flux value
-		 */
-		Map<String, Object> fvProdConf = new HashMap<>();
-		fvProdConf.put(FluxValueObjectiveFunction.OBJECTIVE_FUNCTION_ID, FluxValueObjectiveFunction.ID);
-		fvProdConf.put(FluxValueObjectiveFunction.FV_PARAM_MAXIMIZATION, true);
-		fvProdConf.put(FluxValueObjectiveFunction.FV_PARAM_REACTION, ObjectiveFunctionParameterType.REACTION_PRODUCT);
-		ofMapExtra.put(fvProdConf, SimulationProperties.PFBA);
-		
-		(...)
+/**
+ * 2 - target flux value
+ */
+Map<String, Object> fvProdConf = new HashMap<>();
+fvProdConf.put(FluxValueObjectiveFunction.OBJECTIVE_FUNCTION_ID, FluxValueObjectiveFunction.ID);
+fvProdConf.put(FluxValueObjectiveFunction.FV_PARAM_MAXIMIZATION, true);
+fvProdConf.put(FluxValueObjectiveFunction.FV_PARAM_REACTION, ObjectiveFunctionParameterType.REACTION_PRODUCT);
+ofMapExtra.put(fvProdConf, SimulationProperties.PFBA);
+
+(...)
 ```
 
 Finally, the `CompileResultsTask` is created, specifying, like in the previous step, the root directory of the results (the directory generated in the first analysis step - `createFromConfigurationAndLoadResults()`.
 It is possible to specify some preliminary filters, like ignoring solutions if the result from a given objective function is zero.
 
 ```java
-		CompileResultsTask compileTask = new CompileResultsTask(baseDir+"/20170313_1609#[EXT_IMPORT]", env, null);
-		compileTask.setMapping(AnalysisEnv.OPT_ALGORITHMS);
-		compileTask.setOverrideIfExistent(true);
-		compileTask.setIgnoreOFifZero(new int[]{4});
-		compileTask.setOverrideSimulationConfigurations(overrideSimulationConfiguration);
-		compileTask.setOverrideObjectiveFunctionsConfiguration(ofMapExtra);
-		compileTask.run();
+CompileResultsTask compileTask = new CompileResultsTask(baseDir+"/20170313_1609#[EXT_IMPORT]", env, null);
+compileTask.setMapping(AnalysisEnv.OPT_ALGORITHMS);
+compileTask.setOverrideIfExistent(true);
+compileTask.setIgnoreOFifZero(new int[]{4});
+compileTask.setOverrideSimulationConfigurations(overrideSimulationConfiguration);
+compileTask.setOverrideObjectiveFunctionsConfiguration(ofMapExtra);
+compileTask.run();
 ```
 
 The execution of this step will, for each target/condition/etc., generate a file where for each solution, multiple columns (one for each objective function (metric) specified will be available. These files are generated per-variable, i.e., by specifying the variable at which the results should be mapped (e.g. if multiple algorithms had been used for each target/condition optimization, users could compile the final set of solutions by merging at the `AnalysisEnv.OPT_ALGORITHMS` variable, which would ignore which algorithm yielded each solution). If no mapping variable is specified, they will be generated at the end of each branch of the state-tree.
@@ -230,29 +226,29 @@ Again, it begins by loading the analysis environment:
 ...followed by a specification of the same simulation methods and objective functions as the in the previous step. It should be intuitive that this is not required if the tasks are called within the same method (because the objective function and simulation method maps would be shared by them).
 
 ```java
-		Map<String,Map<String,Object>> overrideSimulationConfiguration = (...)
-	
-		Map<Map<String, Object>, String> overrideObjectiveFunctions = (...)
+Map<String,Map<String,Object>> overrideSimulationConfiguration = (...)
+
+Map<Map<String, Object>, String> overrideObjectiveFunctions = (...)
 
 ```
 
 Finally, `the ChassisTask` is created and executed. 
 
 ```java
-		ChassisTask mostFrequent = new ChassisTask(baseDir+"/20170313_1609#[EXT_IMPORT]", env ,3, 3); 
-		mostFrequent.setOverrideSimulationConfigurations(overrideSimulationConfiguration);
-		mostFrequent.setOverrideObjectiveFunctionsConfiguration(overrideObjectiveFunctions);
-		mostFrequent.setMapping(AnalysisEnv.PRODUCTION_TARGETS); //map the analysis at the PRODUCTION_TARGET variable, i.e., analysis will be centered on the targets 
-		mostFrequent.setBaseUrl("https://www.yeastgenome.org/locus/"); 				
-		mostFrequent.setObjectiveFunctionIndexes(new int[] {0, 5, 6}); 				
-		mostFrequent.setObjectiveFunctionForScoring(5); 								
-		mostFrequent.considerTopScoreSolutions(0.3); 									
-		mostFrequent.addFilterAllowSolutions(5, 0.95, true, true); 					
-		mostFrequent.setStandard2systematic(baseDir + "/model/GIDS.csv", false); 	
-		mostFrequent.setSaveGeneFrequencyTableAndHeatMap(true); 						
-		mostFrequent.setMaxSolutionsPerVariable(100000); 								
-		mostFrequent.setDescription("Original Acids chassis (pFBA)");
-		mostFrequent.run();
+ChassisTask mostFrequent = new ChassisTask(baseDir+"/20170313_1609#[EXT_IMPORT]", env ,3, 3); 
+mostFrequent.setOverrideSimulationConfigurations(overrideSimulationConfiguration);
+mostFrequent.setOverrideObjectiveFunctionsConfiguration(overrideObjectiveFunctions);
+mostFrequent.setMapping(AnalysisEnv.PRODUCTION_TARGETS); //map the analysis at the PRODUCTION_TARGET variable, i.e., analysis will be centered on the targets 
+mostFrequent.setBaseUrl("https://www.yeastgenome.org/locus/"); 				
+mostFrequent.setObjectiveFunctionIndexes(new int[] {0, 5, 6}); 				
+mostFrequent.setObjectiveFunctionForScoring(5); 								
+mostFrequent.considerTopScoreSolutions(0.3); 									
+mostFrequent.addFilterAllowSolutions(5, 0.95, true, true); 					
+mostFrequent.setStandard2systematic(baseDir + "/model/GIDS.csv", false); 	
+mostFrequent.setSaveGeneFrequencyTableAndHeatMap(true); 						
+mostFrequent.setMaxSolutionsPerVariable(100000); 								
+mostFrequent.setDescription("Original Acids chassis (pFBA)");
+mostFrequent.run();
 ```
 Details about each parameter are available in the test class, however, it is important to highlight
 some of them:
