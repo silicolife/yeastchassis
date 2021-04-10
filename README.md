@@ -219,8 +219,8 @@ The final step is the analysis of frequent genes and generation of candidate cha
 Again, it begins by loading the analysis environment:
 
 ```java
-	AnalysisEnv env = AnalysisEnv.loadSerializedObject(envSerialized);
-	env.printTree();
+AnalysisEnv env = AnalysisEnv.loadSerializedObject(envSerialized);
+env.printTree();
 ```
 
 ...followed by a specification of the same simulation methods and objective functions as the in the previous step. It should be intuitive that this is not required if the tasks are called within the same method (because the objective function and simulation method maps would be shared by them).
